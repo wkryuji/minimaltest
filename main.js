@@ -83,22 +83,52 @@ document.addEventListener('keyup', (event) => {
   }
 });
 
+// 🎯 弾発射ロジック
+const bullets = [];
+
+function shootBullet() {
+  const bullet = new THREE.Mesh(
+    new THREE.SphereGeometry(0.05, 8, 8),
+    new THREE.MeshBasicMaterial({ color: 0xffff00 })
+  );
+  bullet.position.copy(camera.position);
+  const direction = new THREE.Vector3();
+  camera.getWorldDirection(direction);
+  bullet.userData.velocity = direction.multiplyScalar(0.5);
+  scene.add(bullet);
+  bullets.push(bullet);
+}
+
+document.addEventListener('mousedown', (event) => {
+  if (controls.isLocked && event.button === 0) {
+    shootBullet();
+  }
+});
+
 // 🎬 アニメーションループ
 function animate() {
   requestAnimationFrame(animate);
 
   direction.z = Number(moveForward) - Number(moveBackward);
   direction.x = Number(moveRight) - Number(moveLeft);
-  direction.normalize(); // 斜め移動の速度調整
+  direction.normalize();
 
   const speed = 0.1;
-
   if (controls.isLocked === true) {
     velocity.z = direction.z * speed;
     velocity.x = direction.x * speed;
-
     controls.moveRight(velocity.x);
     controls.moveForward(velocity.z);
+  }
+
+  // 弾の移動処理
+  for (let i = bullets.length - 1; i >= 0; i--) {
+    const bullet = bullets[i];
+    bullet.position.add(bullet.userData.velocity);
+    if (bullet.position.length() > 100) {
+      scene.remove(bullet);
+      bullets.splice(i, 1);
+    }
   }
 
   cube.rotation.x += 0.01;
