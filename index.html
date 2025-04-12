@@ -2,10 +2,24 @@
 <html lang="ja">
   <head>
     <meta charset="UTF-8" />
-    <title>Three.js Minimal Test</title>
+    <title>Three.js PointerLockControls Test</title>
+    <!-- Import Map を定義 -->
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.157.0/build/three.module.js",
+          "three/examples/jsm/controls/PointerLockControls.js": "https://unpkg.com/three@0.157.0/examples/jsm/controls/PointerLockControls.js"
+        }
+      }
+    </script>
   </head>
   <body>
-    <h1>Hello Three.js</h1>
-    <script type="module" src="./main.js?v=pointerfix2"></script>
+    <script type="module">
+      import * as THREE from 'three';
+      import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls.js';
+
+      console.log("PointerLockControls を正しく読み込みました。");
+      // ここに Three.js のコードを追加
+    </script>
   </body>
 </html>
