@@ -2,8 +2,8 @@
 <html lang="ja">
   <head>
     <meta charset="UTF-8" />
-    <title>Three.js PointerLockControls Test</title>
-    <!-- Import Map を定義 -->
+    <title>Three.js Minimal FPS Test</title>
+    <!-- ✅ Import Map を定義 -->
     <script type="importmap">
       {
         "imports": {
@@ -14,12 +14,8 @@
     </script>
   </head>
   <body>
-    <script type="module">
-      import * as THREE from 'three';
-      import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls.js';
-
-      console.log("PointerLockControls を正しく読み込みました。");
-      // ここに Three.js のコードを追加
-    </script>
+    <h1>Hello PointerLockControls</h1>
+    <!-- ✅ main.js を読み込む（キャッシュバスター付き） -->
+    <script type="module" src="./main.js?v=plc1"></script>
   </body>
 </html>
