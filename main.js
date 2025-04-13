@@ -1,4 +1,9 @@
 import * as THREE from 'three';
+const loadingScreen = document.createElement('div');
+loadingScreen.id = 'loading-screen';
+loadingScreen.textContent = 'Now Loading...';
+loadingScreen.style.cssText = 'position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: black; color: white; font-size: 24px; display: flex; align-items: center; justify-content: center; z-index: 9999;';
+document.body.appendChild(loadingScreen);
 
 const initialCameraPosition = new THREE.Vector3(20, 10, 25);
 const initialCameraTarget = new THREE.Vector3(0, 0, 0);
@@ -20,20 +25,67 @@ function createCameraUI() { // 追加
   camBtnContainer.innerHTML = '';
   if (camMode === 'move') {
     [
-      { label: '⬆ 上へ', action: () => { camera.position.y += 1; } },
-      { label: '⬇ 下へ', action: () => { camera.position.y -= 1; } },
-      { label: '◀ 左へ', action: () => { camera.position.x -= 1; } },
-      { label: '▶ 右へ', action: () => { camera.position.x += 1; } },
-      { label: '🔼 前へ', action: () => { camera.position.z -= 1; } },
-      { label: '🔽 後ろへ', action: () => { camera.position.z += 1; } }
+      { label: '⬆ 上へ', action: () => {
+          followTargetName = null;
+          cameraTarget.copy(cameraTarget);
+          camera.position.y += 1;
+        } },
+      { label: '⬇ 下へ', action: () => {
+          followTargetName = null;
+          cameraTarget.copy(cameraTarget);
+          camera.position.y -= 1;
+        } },
+      { label: '◀ 左へ', action: () => {
+          followTargetName = null;
+          cameraTarget.copy(cameraTarget);
+          camera.position.x -= 1;
+        } },
+      { label: '▶ 右へ', action: () => {
+          followTargetName = null;
+          cameraTarget.copy(cameraTarget);
+          camera.position.x += 1;
+        } },
+      { label: '🔼 前へ', action: () => {
+          followTargetName = null;
+          cameraTarget.copy(cameraTarget);
+          camera.position.z -= 1;
+        } },
+      { label: '🔽 後ろへ', action: () => {
+          followTargetName = null;
+          cameraTarget.copy(cameraTarget);
+          camera.position.z += 1;
+        } }
     ].forEach(btn => camBtnContainer.appendChild(createCamButton(btn.label, btn.action)));
   } else if (camMode === 'look') {
     [
-      { label: '👁 上を向く', action: () => { cameraTarget.y += 1; } },
-      { label: '👁 下を向く', action: () => { cameraTarget.y -= 1; } },
-      { label: '👁 左を向く', action: () => { cameraTarget.x -= 1; } },
-      { label: '👁 右を向く', action: () => { cameraTarget.x += 1; } }
+      { label: '👁 上を向く', action: () => {
+          followTargetName = null;
+          cameraTarget.copy(cameraTarget);
+          cameraTarget.y += 1;
+        } },
+      { label: '👁 下を向く', action: () => {
+          followTargetName = null;
+          cameraTarget.copy(cameraTarget);
+          cameraTarget.y -= 1;
+        } },
+      { label: '👁 左を向く', action: () => {
+          followTargetName = null;
+          cameraTarget.copy(cameraTarget);
+          cameraTarget.x -= 1;
+        } },
+      { label: '👁 右を向く', action: () => {
+          followTargetName = null;
+          cameraTarget.copy(cameraTarget);
+          cameraTarget.x += 1;
+        } }
     ].forEach(btn => camBtnContainer.appendChild(createCamButton(btn.label, btn.action)));
+  }
+  // スマホ向け：ボタンを再拡大
+  if (window.innerWidth / window.devicePixelRatio < 500) {
+    camBtnContainer.querySelectorAll('button').forEach(btn => {
+      btn.style.padding = '16px 28px';
+      btn.style.fontSize = '20px';
+    });
   }
 }
 
@@ -67,10 +119,12 @@ followDistLabel.textContent = '追尾距離';
 followDistLabel.style = labelStyle;
 
 const followDistInput = document.createElement('input');
-followDistInput.type = 'number';
+followDistInput.type = 'range';
+followDistInput.min = '0.1';
+followDistInput.max = '10.0';
 followDistInput.step = '0.1';
-followDistInput.value = followDistance.toString();
-followDistInput.style = inputStyle;
+followDistInput.value = '2.5';
+followDistInput.style.width = '100px';
 
 const camToggleBtn = document.createElement('button'); // 追加
 camToggleBtn.textContent = '🔀 切り替え';
@@ -108,11 +162,17 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
 scene.add(new THREE.AmbientLight(0x333333, 1.2));
-const sunLight = new THREE.PointLight(0xffffff, 200, 100);
+const sunLight = new THREE.PointLight(0xffffff, 5, 0); // 強度200、距離無制限（減衰なし）
+sunLight.decay = 0;
 sunLight.position.set(0, 0, 0);
 scene.add(sunLight);
 
-const textureLoader = new THREE.TextureLoader();
+const manager = new THREE.LoadingManager(() => {
+  // 全てのテクスチャ読み込み完了後に呼ばれる
+  document.getElementById('loading-screen').style.display = 'none';
+  animate(); // アニメーション開始
+});
+const textureLoader = new THREE.TextureLoader(manager);
 const textures = {
   "水星": textureLoader.load('textures/2k_mercury.jpg'),
   "金星": textureLoader.load('textures/2k_venus_surface.jpg'),
@@ -129,7 +189,7 @@ const textures = {
 
 // 星空背景
 const starsTexture = textureLoader.load('textures/8k_stars_milky_way.jpg');
-const skyGeo = new THREE.SphereGeometry(300, 64, 64);
+const skyGeo = new THREE.SphereGeometry(600, 64, 64);
 const skyMat = new THREE.MeshBasicMaterial({ map: starsTexture, side: THREE.BackSide, depthWrite: false });
 scene.add(new THREE.Mesh(skyGeo, skyMat));
 
@@ -148,14 +208,14 @@ const sun = new THREE.Mesh(
 scene.add(sun);
 
 const orbitRaw = [
-  { name: "水星", size: 0.6, radius: 3, days: 88, rotationHours: 1407.6 },
-  { name: "金星", size: 1.0, radius: 5, days: 225, rotationHours: -5832 },
-  { name: "地球", size: 1.12, radius: 7, days: 365, rotationHours: 24 },
-  { name: "火星", size: 0.88, radius: 9, days: 687, rotationHours: 24.6 },
-  { name: "木星", size: 2.0, radius: 15, days: 4333, rotationHours: 9.9 },
-  { name: "土星", size: 1.8, radius: 18, days: 10759, rotationHours: 10.7 },
-  { name: "天王星", size: 1.4, radius: 21, days: 30685, rotationHours: -17.2 },
-  { name: "海王星", size: 1.4, radius: 24, days: 60190, rotationHours: 16.1 }
+  { name: "水星", size: 0.2, radius: 5.8, days: 88, rotationHours: 1407.6 },
+  { name: "金星", size: 0.35, radius: 10.8, days: 225, rotationHours: -5832 },
+  { name: "地球", size: 0.4, radius: 15.0, days: 365, rotationHours: 24 },
+  { name: "火星", size: 0.3, radius: 22.8, days: 687, rotationHours: 24.6 },
+  { name: "木星", size: 0.9, radius: 77.8, days: 4333, rotationHours: 9.9 },
+  { name: "土星", size: 0.8, radius: 143.4, days: 10759, rotationHours: 10.7 },
+  { name: "天王星", size: 0.5, radius: 287.1, days: 30685, rotationHours: -17.2 },
+  { name: "海王星", size: 0.5, radius: 449.5, days: 60190, rotationHours: 16.1 }
 ];
 
 const earthOrbitSeconds = 20;
@@ -192,6 +252,7 @@ orbitRaw.forEach((data, i) => {
     orbitSpeed,
     rotationSpeed
   };
+  planet.userData.baseScale = planet.scale.clone();
 
   if (data.name === "地球") {
     earthObject = planet;
@@ -202,9 +263,11 @@ orbitRaw.forEach((data, i) => {
     );
     moon.userData = {
       angle: Math.random() * Math.PI * 2,
-      orbitRadius: 0.5,
+      baseOrbitRadius: 0.3,
+      orbitRadius: 0.6,
       orbitSpeed: (2 * Math.PI) / 2.0
     };
+    moonGroup.rotation.x = THREE.MathUtils.degToRad(5); // 月の軌道傾斜を追加
     moonGroup.add(moon);
     planet.add(moonGroup);
     planet.userData.moon = { mesh: moon, group: moonGroup };
@@ -225,11 +288,18 @@ orbitRaw.forEach((data, i) => {
   if (data.name === "土星") {
     const saturnRingTex = textureLoader.load('textures/2k_saturn_ring_alpha.png');
     const saturnRing = new THREE.Mesh(
-      new THREE.RingGeometry(0.55, 1.2, 128),
-      new THREE.MeshBasicMaterial({ map: saturnRingTex, side: THREE.DoubleSide, transparent: true, opacity: 0.85 })
+      new THREE.RingGeometry(0.9, 1.5, 128),
+      new THREE.MeshBasicMaterial({
+        map: saturnRingTex,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.85
+      })
     );
-    saturnRing.rotation.x = Math.PI / 2.5;
+    saturnRing.rotation.x = Math.PI / 2;
+    saturnRing.position.y = 0.02; // 土星本体と少しずらす
     planet.add(saturnRing);
+
   }
 
   orbitGroup.add(planet);
@@ -269,47 +339,55 @@ rotationLabel.textContent = '自転倍率';
 rotationLabel.style = labelStyle;
 
 const rotationInput = document.createElement('input');
-rotationInput.type = 'number';
+rotationInput.type = 'range';
+rotationInput.min = '0.1';
+rotationInput.max = '5.0';
 rotationInput.step = '0.1';
-rotationInput.value = rotationSpeedMultiplier.toString();
-rotationInput.style = inputStyle;
+rotationInput.value = '1.0';
+rotationInput.style.width = '100px';
 
 const orbitLabel = document.createElement('label');
 orbitLabel.textContent = '公転倍率';
 orbitLabel.style = labelStyle;
 
 const orbitInput = document.createElement('input');
-orbitInput.type = 'number';
+orbitInput.type = 'range';
+orbitInput.min = '0.1';
+orbitInput.max = '5.0';
 orbitInput.step = '0.1';
-orbitInput.value = orbitSpeedMultiplier.toString();
-orbitInput.style = inputStyle;
+orbitInput.value = '1.0';
+orbitInput.style.width = '100px';
 
 const distanceLabel = document.createElement('label');
 distanceLabel.textContent = '距離倍率';
 distanceLabel.style = labelStyle;
 
 const distanceInput = document.createElement('input');
-distanceInput.type = 'number';
-distanceInput.step = '0.1';
+distanceInput.type = 'range';
+distanceInput.min = '0.1';
+distanceInput.max = '3.0';
+distanceInput.step = '0.01';
 distanceInput.value = '1.0';
-distanceInput.style = inputStyle;
+distanceInput.style.width = '100px';
 
 const sizeLabel = document.createElement('label'); // 追加
 sizeLabel.textContent = '大きさ倍率'; // 追加
 sizeLabel.style = labelStyle; // 追加
 
-const sizeInput = document.createElement('input'); // 追加
-sizeInput.type = 'number'; // 追加
-sizeInput.step = '0.1'; // 追加
-sizeInput.value = '1.0'; // 追加
-sizeInput.style = inputStyle; // 追加
+const sizeInput = document.createElement('input');
+sizeInput.type = 'range';
+sizeInput.min = '0.1';
+sizeInput.max = '3.0';
+sizeInput.step = '0.01';
+sizeInput.value = '1.0';
+sizeInput.style.width = '100px';
 
-const applyBtn = document.createElement('button');
-applyBtn.textContent = 'リセット';
-applyBtn.style.cssText = 'padding: 6px 12px; font-size: 14px;';
+const resetBtn = document.createElement('button');
+resetBtn.textContent = 'リセット';
+resetBtn.style.cssText = 'padding: 6px 12px; font-size: 14px;';
 
 // bottomRow の作成と追加
-applyBtn.addEventListener('click', () => {
+resetBtn.addEventListener('click', () => {
   rotationSpeedMultiplier = 1.0;
   orbitSpeedMultiplier = 1.0;
   followDistance = 2.5;
@@ -321,7 +399,7 @@ applyBtn.addEventListener('click', () => {
   sizeInput.value = '1.0';
   sizeMultiplier = 1.0;
 
-  planets.forEach(p => {
+  planets.forEach(p => { 
     // reset distance
     const angle = p.mesh.userData.angle;
     const baseRadius = p.mesh.userData.baseRadius;
@@ -332,8 +410,13 @@ applyBtn.addEventListener('click', () => {
     p.mesh.position.set(x, 0, z);
 
     // reset size
-    const baseSize = orbitRaw.find(d => d.name === p.mesh.userData.name)?.size || 1.0;
-    p.mesh.scale.setScalar(baseSize);
+    const inputSize = parseFloat(sizeInput.value) || 1.0;
+    const baseScale = p.mesh.userData.baseScale;
+    p.mesh.scale.set(
+      baseScale.x * inputSize,
+      baseScale.y * inputSize,
+      baseScale.z * inputSize
+    );
 
     // reset ring
     const ringMesh = p.group.children[0];
@@ -356,7 +439,7 @@ bottomRow.appendChild(distanceLabel);
 bottomRow.appendChild(distanceInput);
 bottomRow.appendChild(sizeLabel); // 追加
 bottomRow.appendChild(sizeInput); // 追加
-bottomRow.appendChild(applyBtn);
+bottomRow.appendChild(resetBtn);
 controlContainer.appendChild(bottomRow);
 
 followDistInput.addEventListener('input', () => {
@@ -380,6 +463,11 @@ distanceInput.addEventListener('input', () => { // 追加
       const baseRadius = p.mesh.userData.baseRadius;
       const newRadius = baseRadius * newDist;
       p.mesh.userData.radius = newRadius;
+      if (p.mesh.userData.moon) {
+        const moon = p.mesh.userData.moon.mesh;
+        const baseMoonRadius = moon.userData.baseOrbitRadius || 1.0;
+        moon.userData.orbitRadius = baseMoonRadius * newDist;
+      }
       const x = Math.cos(angle) * newRadius;
       const z = Math.sin(angle) * newRadius;
       p.mesh.position.set(x, 0, z);
@@ -398,10 +486,14 @@ sizeInput.addEventListener('input', () => { // 追加
   const newSize = parseFloat(sizeInput.value); // 追加
   if (!isNaN(newSize)) { // 追加
     sizeMultiplier = newSize; // 追加
-    planets.forEach(p => { // 追加
-      const baseSize = orbitRaw.find(d => d.name === p.mesh.userData.name)?.size || 1.0; // 追加
-      p.mesh.scale.setScalar(baseSize * sizeMultiplier); // 追加
-    }); // 追加
+    planets.forEach(p => {
+      const baseScale = p.mesh.userData.baseScale;
+      p.mesh.scale.set(
+        baseScale.x * sizeMultiplier,
+        baseScale.y * sizeMultiplier,
+        baseScale.z * sizeMultiplier
+      );
+    });
   } // 追加
 });
 
@@ -423,7 +515,7 @@ function animate() {
       moon.userData.angle += moon.userData.orbitSpeed * delta * orbitSpeedMultiplier;
       moon.position.set(
         Math.cos(moon.userData.angle) * moon.userData.orbitRadius,
-        0,
+        0.15,
         Math.sin(moon.userData.angle) * moon.userData.orbitRadius
       );
       moon.rotation.y += 0.05 * delta * rotationSpeedMultiplier;
@@ -455,7 +547,7 @@ function animate() {
 
   renderer.render(scene, camera);
 }
-animate();
+// animate(); // テクスチャ読み込み完了後に実行されます
 
 const isSmallDisplay = window.innerWidth / window.devicePixelRatio < 500;
 if (isSmallDisplay) {
@@ -477,4 +569,16 @@ if (isSmallDisplay) {
   const bottomRow = document.getElementById('bottom-row');
   if (topRow) topRow.style.flexDirection = 'column';
   if (bottomRow) bottomRow.style.flexDirection = 'column';
-} 
+}
+if (window.innerHeight < 500 && window.innerWidth > window.innerHeight) {
+  camBtnContainer.style.flexDirection = 'row';
+  camBtnContainer.style.flexWrap = 'wrap';
+  camBtnContainer.style.justifyContent = 'flex-end';
+  camBtnContainer.style.alignItems = 'center';
+  camBtnContainer.style.gap = '10px';
+  camBtnContainer.style.right = '12px';
+  camBtnContainer.style.bottom = '60px'; // 少し上に
+
+  camToggleBtn.style.bottom = '12px';
+  camToggleBtn.style.right = '200px';
+}
