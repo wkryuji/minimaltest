@@ -4,6 +4,8 @@ const initialCameraPosition = new THREE.Vector3(20, 10, 25);
 const initialCameraTarget = new THREE.Vector3(0, 0, 0);
 let cameraTarget = new THREE.Vector3(0, 0, 0);
 let followTargetName = null; // 追加
+let camMode = 'move'; // 追加
+let sizeMultiplier = 1.0; // 追加
 function createCamButton(label, onClick) {
   const btn = document.createElement('button');
   btn.textContent = label;
@@ -12,26 +14,70 @@ function createCamButton(label, onClick) {
   return btn;
 }
 
+function createCameraUI() { // 追加
+  camBtnContainer.innerHTML = '';
+  if (camMode === 'move') {
+    [
+      { label: '⬆ 上へ', action: () => { camera.position.y += 1; } },
+      { label: '⬇ 下へ', action: () => { camera.position.y -= 1; } },
+      { label: '◀ 左へ', action: () => { camera.position.x -= 1; } },
+      { label: '▶ 右へ', action: () => { camera.position.x += 1; } },
+      { label: '🔼 前へ', action: () => { camera.position.z -= 1; } },
+      { label: '🔽 後ろへ', action: () => { camera.position.z += 1; } }
+    ].forEach(btn => camBtnContainer.appendChild(createCamButton(btn.label, btn.action)));
+  } else if (camMode === 'look') {
+    [
+      { label: '👁 上を向く', action: () => { cameraTarget.y += 1; } },
+      { label: '👁 下を向く', action: () => { cameraTarget.y -= 1; } },
+      { label: '👁 左を向く', action: () => { cameraTarget.x -= 1; } },
+      { label: '👁 右を向く', action: () => { cameraTarget.x += 1; } }
+    ].forEach(btn => camBtnContainer.appendChild(createCamButton(btn.label, btn.action)));
+  }
+}
+
 // === UIボタン ===
-const followSelect = document.createElement('select'); // 変更
-followSelect.style.cssText = 'position: absolute; top: 12px; left: 12px; z-index: 100;';
-const followOptions = ['なし', '水星', '金星', '地球', '火星', '木星', '土星', '天王星', '海王星'];
+let followDistance = 2.5;
+const labelStyle = 'margin-right: 6px; color: white; font-size: 14px;';
+const inputStyle = 'width: 60px; margin-right: 10px;';
+const followSelect = document.createElement('select');
+followSelect.style.cssText = 'margin-right: 10px;';
+const followOptions = ['元に戻す', '水星', '金星', '地球', '火星', '木星', '土星', '天王星', '海王星'];
 followOptions.forEach(name => {
   const option = document.createElement('option');
-  option.value = name === 'なし' ? '' : name;
-  option.textContent = name === 'なし' ? '🚫 追尾しない' : `🔭 ${name}を追う`;
+  option.value = name === '元に戻す' ? '' : name;
+  option.textContent = name === '元に戻す' ? '🔄 元に戻す' : `🔭 ${name}を追う`;
   followSelect.appendChild(option);
 });
-document.body.appendChild(followSelect);
-
-followSelect.addEventListener('change', () => { // 変更
+followSelect.addEventListener('change', () => {
   followTargetName = followSelect.value || null;
+  if (!followTargetName) {
+    camera.position.copy(initialCameraPosition);
+    cameraTarget.copy(initialCameraTarget);
+  }
 });
 
-const resetBtn = document.createElement('button');
-resetBtn.textContent = '🔄 元に戻す';
-resetBtn.style.cssText = 'position: absolute; top: 12px; left: 130px; z-index: 100;';
-document.body.appendChild(resetBtn);
+const followLabel = document.createElement('label');
+followLabel.textContent = 'カメラ：';
+followLabel.style.cssText = 'color: white; font-size: 14px; margin-right: 6px;';
+
+const followDistLabel = document.createElement('label');
+followDistLabel.textContent = '追尾距離';
+followDistLabel.style = labelStyle;
+
+const followDistInput = document.createElement('input');
+followDistInput.type = 'number';
+followDistInput.step = '0.1';
+followDistInput.value = followDistance.toString();
+followDistInput.style = inputStyle;
+
+const camToggleBtn = document.createElement('button'); // 追加
+camToggleBtn.textContent = '🔀 切り替え';
+camToggleBtn.style.cssText = 'position: absolute; bottom: 12px; left: 160px; z-index: 100;';
+camToggleBtn.addEventListener('click', () => {
+  camMode = camMode === 'move' ? 'look' : 'move';
+  createCameraUI();
+});
+document.body.appendChild(camToggleBtn); // 追加
 
 let orbitSpeedMultiplier = 1.0;
 let rotationSpeedMultiplier = 1.0;
@@ -181,84 +227,94 @@ orbitRaw.forEach((data, i) => {
 const camBtnContainer = document.createElement('div');
 camBtnContainer.style.cssText = 'position: absolute; bottom: 12px; left: 12px; z-index: 100; display: flex; flex-direction: column; gap: 4px;';
 document.body.appendChild(camBtnContainer);
+createCameraUI();
 
-camBtnContainer.innerHTML = '';
-[ 
-  { label: '⬆ 上へ', action: () => { camera.position.y += 1; } },
-  { label: '⬇ 下へ', action: () => { camera.position.y -= 1; } },
-  { label: '◀ 左へ', action: () => { camera.position.x -= 1; } },
-  { label: '▶ 右へ', action: () => { camera.position.x += 1; } },
-  { label: '🔼 前へ', action: () => { camera.position.z -= 1; } },
-  { label: '🔽 後ろへ', action: () => { camera.position.z += 1; } }
-].forEach(btn => camBtnContainer.appendChild(createCamButton(btn.label, btn.action)));
-
-const lookBtnContainer = document.createElement('div');
-lookBtnContainer.style.cssText = 'position: absolute; bottom: 200px; left: 12px; z-index: 100; display: flex; flex-direction: column; gap: 4px;';
-document.body.appendChild(lookBtnContainer);
-
-lookBtnContainer.innerHTML = '';
-[ 
-  { label: '👁 上を向く', action: () => { cameraTarget.y += 1; } },
-  { label: '👁 下を向く', action: () => { cameraTarget.y -= 1; } },
-  { label: '👁 左を向く', action: () => { cameraTarget.x -= 1; } },
-  { label: '👁 右を向く', action: () => { cameraTarget.x += 1; } }
-].forEach(btn => lookBtnContainer.appendChild(createCamButton(btn.label, btn.action)));
-
-resetBtn.addEventListener('click', () => {
-  camera.position.copy(initialCameraPosition);
-  cameraTarget.copy(initialCameraTarget);
-});
-
-// ラベルと入力フィールド
-const labelStyle = 'color: white; font-size: 14px; margin-right: 8px;';
-const inputStyle = 'width: 60px; margin-right: 20px;';
-
+// Removed duplicate definitions of labelStyle and inputStyle
 const controlContainer = document.createElement('div');
-controlContainer.style.cssText = 'position: absolute; top: 50px; left: 12px; z-index: 100; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 8px; display: flex; align-items: center;';
+controlContainer.style.cssText = 'position: absolute; top: 50px; left: 12px; z-index: 100; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 8px; display: flex; flex-direction: column; gap: 6px;'; // Modified
 document.body.appendChild(controlContainer);
 
+// すでに追加されている topRow / bottomRow を削除（再実行対策）
+const existingTopRow = document.querySelector('#top-row');
+if (existingTopRow) existingTopRow.remove();
+const existingBottomRow = document.querySelector('#bottom-row');
+if (existingBottomRow) existingBottomRow.remove();
+
+// topRow の作成と追加
+const topRow = document.createElement('div');
+topRow.id = 'top-row';
+topRow.style.cssText = 'display: flex; flex-wrap: wrap; gap: 8px; align-items: center;';
+topRow.appendChild(followLabel);
+topRow.appendChild(followSelect);
+topRow.appendChild(followDistLabel);
+topRow.appendChild(followDistInput);
+controlContainer.appendChild(topRow);
+
+// Move the definitions of rotationLabel, rotationInput, orbitLabel, orbitInput, distanceLabel, distanceInput, sizeLabel, sizeInput, and applyBtn before their usage in bottomRow.appendChild(...).
 const rotationLabel = document.createElement('label');
 rotationLabel.textContent = '自転倍率';
 rotationLabel.style = labelStyle;
-controlContainer.appendChild(rotationLabel);
 
 const rotationInput = document.createElement('input');
 rotationInput.type = 'number';
 rotationInput.step = '0.1';
 rotationInput.value = rotationSpeedMultiplier.toString();
 rotationInput.style = inputStyle;
-controlContainer.appendChild(rotationInput);
 
 const orbitLabel = document.createElement('label');
 orbitLabel.textContent = '公転倍率';
 orbitLabel.style = labelStyle;
-controlContainer.appendChild(orbitLabel);
 
 const orbitInput = document.createElement('input');
 orbitInput.type = 'number';
 orbitInput.step = '0.1';
 orbitInput.value = orbitSpeedMultiplier.toString();
 orbitInput.style = inputStyle;
-controlContainer.appendChild(orbitInput);
 
 const distanceLabel = document.createElement('label');
 distanceLabel.textContent = '距離倍率';
 distanceLabel.style = labelStyle;
-controlContainer.appendChild(distanceLabel);
 
 const distanceInput = document.createElement('input');
 distanceInput.type = 'number';
 distanceInput.step = '0.1';
 distanceInput.value = '1.0';
 distanceInput.style = inputStyle;
-controlContainer.appendChild(distanceInput);
+
+const sizeLabel = document.createElement('label'); // 追加
+sizeLabel.textContent = '大きさ倍率'; // 追加
+sizeLabel.style = labelStyle; // 追加
+
+const sizeInput = document.createElement('input'); // 追加
+sizeInput.type = 'number'; // 追加
+sizeInput.step = '0.1'; // 追加
+sizeInput.value = '1.0'; // 追加
+sizeInput.style = inputStyle; // 追加
 
 const applyBtn = document.createElement('button');
 applyBtn.textContent = '適用';
 applyBtn.style.cssText = 'padding: 6px 12px; font-size: 14px;';
-controlContainer.appendChild(applyBtn);
 
-// 入力処理
+// bottomRow の作成と追加
+const bottomRow = document.createElement('div');
+bottomRow.id = 'bottom-row';
+bottomRow.style.cssText = 'display: flex; gap: 8px; align-items: center;';
+bottomRow.appendChild(rotationLabel);
+bottomRow.appendChild(rotationInput);
+bottomRow.appendChild(orbitLabel);
+bottomRow.appendChild(orbitInput);
+bottomRow.appendChild(distanceLabel);
+bottomRow.appendChild(distanceInput);
+bottomRow.appendChild(sizeLabel); // 追加
+bottomRow.appendChild(sizeInput); // 追加
+bottomRow.appendChild(applyBtn);
+controlContainer.appendChild(bottomRow);
+
+followDistInput.addEventListener('input', () => {
+  const val = parseFloat(followDistInput.value);
+  if (!isNaN(val)) followDistance = val;
+});
+
 rotationInput.addEventListener('input', () => { // 追加
   const val = parseFloat(rotationInput.value);
   if (!isNaN(val)) rotationSpeedMultiplier = val;
@@ -288,6 +344,16 @@ distanceInput.addEventListener('input', () => { // 追加
       }
     });
   }
+});
+sizeInput.addEventListener('input', () => { // 追加
+  const newSize = parseFloat(sizeInput.value); // 追加
+  if (!isNaN(newSize)) { // 追加
+    sizeMultiplier = newSize; // 追加
+    planets.forEach(p => { // 追加
+      const baseSize = orbitRaw.find(d => d.name === p.mesh.userData.name)?.size || 1.0; // 追加
+      p.mesh.scale.setScalar(baseSize * sizeMultiplier); // 追加
+    }); // 追加
+  } // 追加
 });
 
 const clock = new THREE.Clock();
@@ -324,15 +390,20 @@ function animate() {
     if (found) {
       const targetPlanet = found.mesh;
       const planetPos = targetPlanet.getWorldPosition(new THREE.Vector3());
-      const offset = new THREE.Vector3(2, 1.5, 2);
-      camera.position.lerp(planetPos.clone().add(offset), 0.1);
-      cameraTarget.lerp(planetPos, 0.1);
+      const offset = new THREE.Vector3(followDistance, followDistance * 0.75, followDistance);
+      const cameraPos = planetPos.clone().add(offset);
+      camera.position.lerp(cameraPos, 0.1);
+
+      // カメラ注視点を太陽方向に少しずらすが、惑星の位置が見えなくならないようにする
+      const sunPos = sun.getWorldPosition(new THREE.Vector3());
+      const directionToSun = sunPos.clone().sub(planetPos).normalize();
+      const adjustedLookAt = planetPos.clone().add(directionToSun.multiplyScalar(1.0)); // 惑星から太陽方向に1ユニット
+      cameraTarget.lerp(adjustedLookAt, 0.1);
     }
   }
-
 
   camera.lookAt(cameraTarget);
 
   renderer.render(scene, camera);
 }
-animate();  
+animate();
