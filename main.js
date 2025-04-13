@@ -9,7 +9,7 @@ let sizeMultiplier = 1.0; // 追加
 function createCamButton(label, onClick) {
   const btn = document.createElement('button');
   btn.textContent = label;
-  btn.style.cssText = 'padding: 6px 12px; font-size: 14px;';
+  btn.style.cssText = 'padding: 10px 16px; font-size: 16px;';
   btn.addEventListener('click', onClick);
   return btn;
 }
@@ -135,14 +135,14 @@ const sun = new THREE.Mesh(
 scene.add(sun);
 
 const orbitRaw = [
-  { name: "水星", size: 0.15, radius: 3, days: 88, rotationHours: 1407.6 },
-  { name: "金星", size: 0.25, radius: 5, days: 225, rotationHours: -5832 },
-  { name: "地球", size: 0.28, radius: 7, days: 365, rotationHours: 24 },
-  { name: "火星", size: 0.22, radius: 9, days: 687, rotationHours: 24.6 },
-  { name: "木星", size: 0.5, radius: 15, days: 4333, rotationHours: 9.9 },
-  { name: "土星", size: 0.45, radius: 18, days: 10759, rotationHours: 10.7 },
-  { name: "天王星", size: 0.35, radius: 21, days: 30685, rotationHours: -17.2 },
-  { name: "海王星", size: 0.35, radius: 24, days: 60190, rotationHours: 16.1 }
+  { name: "水星", size: 0.6, radius: 3, days: 88, rotationHours: 1407.6 },
+  { name: "金星", size: 1.0, radius: 5, days: 225, rotationHours: -5832 },
+  { name: "地球", size: 1.12, radius: 7, days: 365, rotationHours: 24 },
+  { name: "火星", size: 0.88, radius: 9, days: 687, rotationHours: 24.6 },
+  { name: "木星", size: 2.0, radius: 15, days: 4333, rotationHours: 9.9 },
+  { name: "土星", size: 1.8, radius: 18, days: 10759, rotationHours: 10.7 },
+  { name: "天王星", size: 1.4, radius: 21, days: 30685, rotationHours: -17.2 },
+  { name: "海王星", size: 1.4, radius: 24, days: 60190, rotationHours: 16.1 }
 ];
 
 const earthOrbitSeconds = 20;
@@ -225,7 +225,7 @@ orbitRaw.forEach((data, i) => {
 });
 
 const camBtnContainer = document.createElement('div');
-camBtnContainer.style.cssText = 'position: absolute; bottom: 12px; left: 12px; z-index: 100; display: flex; flex-direction: column; gap: 4px;';
+camBtnContainer.style.cssText = 'position: absolute; bottom: 12px; left: 12px; z-index: 100; display: flex; flex-direction: column; gap: 10px;';
 document.body.appendChild(camBtnContainer);
 createCameraUI();
 
@@ -292,10 +292,46 @@ sizeInput.value = '1.0'; // 追加
 sizeInput.style = inputStyle; // 追加
 
 const applyBtn = document.createElement('button');
-applyBtn.textContent = '適用';
+applyBtn.textContent = 'リセット';
 applyBtn.style.cssText = 'padding: 6px 12px; font-size: 14px;';
 
 // bottomRow の作成と追加
+applyBtn.addEventListener('click', () => {
+  rotationSpeedMultiplier = 1.0;
+  orbitSpeedMultiplier = 1.0;
+  followDistance = 2.5;
+  // Removed setting sizeMultiplier here to set it after resetting the input field
+
+  rotationInput.value = '1.0';
+  orbitInput.value = '1.0';
+  followDistInput.value = '2.5';
+  sizeInput.value = '1.0';
+  sizeMultiplier = 1.0;
+
+  planets.forEach(p => {
+    // reset distance
+    const angle = p.mesh.userData.angle;
+    const baseRadius = p.mesh.userData.baseRadius;
+    const newRadius = baseRadius;
+    p.mesh.userData.radius = newRadius;
+    const x = Math.cos(angle) * newRadius;
+    const z = Math.sin(angle) * newRadius;
+    p.mesh.position.set(x, 0, z);
+
+    // reset size
+    const baseSize = orbitRaw.find(d => d.name === p.mesh.userData.name)?.size || 1.0;
+    p.mesh.scale.setScalar(baseSize);
+
+    // reset ring
+    const ringMesh = p.group.children[0];
+    if (ringMesh.geometry instanceof THREE.RingGeometry) {
+      const innerRadius = newRadius - 0.02;
+      const outerRadius = newRadius + 0.02;
+      ringMesh.geometry.dispose();
+      ringMesh.geometry = new THREE.RingGeometry(innerRadius, outerRadius, 256);
+    }
+  });
+});
 const bottomRow = document.createElement('div');
 bottomRow.id = 'bottom-row';
 bottomRow.style.cssText = 'display: flex; gap: 8px; align-items: center;';
@@ -407,3 +443,10 @@ function animate() {
   renderer.render(scene, camera);
 }
 animate();
+
+if (window.innerWidth < 800) {
+  document.querySelectorAll('button').forEach(btn => {
+    btn.style.padding = '14px 24px';
+    btn.style.fontSize = '18px';
+  });
+}
