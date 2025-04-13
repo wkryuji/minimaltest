@@ -14,6 +14,8 @@ function createCamButton(label, onClick) {
   return btn;
 }
 
+
+
 function createCameraUI() { // 追加
   camBtnContainer.innerHTML = '';
   if (camMode === 'move') {
@@ -72,7 +74,18 @@ followDistInput.style = inputStyle;
 
 const camToggleBtn = document.createElement('button'); // 追加
 camToggleBtn.textContent = '🔀 切り替え';
-camToggleBtn.style.cssText = 'position: absolute; bottom: 12px; left: 160px; z-index: 100;';
+camToggleBtn.style.cssText = `
+  position: absolute;
+  bottom: 12px;
+  right: 180px;
+  z-index: 100;
+  padding: 14px 24px;
+  font-size: 18px;
+  font-weight: bold;
+  background-color: #ffffff;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+`;
 camToggleBtn.addEventListener('click', () => {
   camMode = camMode === 'move' ? 'look' : 'move';
   createCameraUI();
@@ -225,7 +238,7 @@ orbitRaw.forEach((data, i) => {
 });
 
 const camBtnContainer = document.createElement('div');
-camBtnContainer.style.cssText = 'position: absolute; bottom: 12px; left: 12px; z-index: 100; display: flex; flex-direction: column; gap: 10px;';
+camBtnContainer.style.cssText = 'position: absolute; bottom: 12px; right: 12px; z-index: 100; display: flex; flex-direction: column; gap: 10px;';
 document.body.appendChild(camBtnContainer);
 createCameraUI();
 
@@ -446,8 +459,22 @@ animate();
 
 const isSmallDisplay = window.innerWidth / window.devicePixelRatio < 500;
 if (isSmallDisplay) {
+  // ボタンを大きく
   document.querySelectorAll('button').forEach(btn => {
-    btn.style.padding = '14px 24px';
-    btn.style.fontSize = '18px';
+    btn.style.padding = '16px 28px';
+    btn.style.fontSize = '20px';
   });
-}
+
+  // ラベルや入力欄も大きく
+  document.querySelectorAll('label, select, input[type="number"]').forEach(el => {
+    el.style.fontSize = '20px';
+    el.style.height = '36px';
+    el.style.padding = '6px 10px';
+  });
+
+  // UI行を縦並びにする
+  const topRow = document.getElementById('top-row');
+  const bottomRow = document.getElementById('bottom-row');
+  if (topRow) topRow.style.flexDirection = 'column';
+  if (bottomRow) bottomRow.style.flexDirection = 'column';
+} 
