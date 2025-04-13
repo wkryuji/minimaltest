@@ -1,8 +1,13 @@
 import * as THREE from 'three';
+// Safariなどでの余白対策
+document.body.style.margin = '0';
+document.body.style.padding = '0';
+document.documentElement.style.margin = '0';
+document.documentElement.style.padding = '0';
 const loadingScreen = document.createElement('div');
 loadingScreen.id = 'loading-screen';
 loadingScreen.textContent = 'Now Loading...';
-loadingScreen.style.cssText = 'position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: black; color: white; font-size: 24px; display: flex; align-items: center; justify-content: center; z-index: 9999;';
+loadingScreen.style.cssText = 'position: fixed; inset: 0; background: black; color: white; font-size: 24px; display: flex; align-items: center; justify-content: center; z-index: 9999;';
 document.body.appendChild(loadingScreen);
 
 const initialCameraPosition = new THREE.Vector3(20, 10, 25);
