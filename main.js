@@ -444,7 +444,8 @@ function animate() {
 }
 animate();
 
-if (window.innerWidth < 800) {
+const isSmallDisplay = window.innerWidth / window.devicePixelRatio < 500;
+if (isSmallDisplay) {
   document.querySelectorAll('button').forEach(btn => {
     btn.style.padding = '14px 24px';
     btn.style.fontSize = '18px';
