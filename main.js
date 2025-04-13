@@ -79,7 +79,7 @@ const orbitRaw = [
   { name: "海王星", size: 0.35, radius: 24, days: 60190, rotationHours: 16.1 }
 ];
 
-const earthOrbitSeconds = 10;
+const earthOrbitSeconds = 20;
 const dayToSec = earthOrbitSeconds / 365;
 const orbitInclinations = [7, 3.4, 0, 1.8, 1.3, 2.5, 0.8, 1.8].map(d => THREE.MathUtils.degToRad(d));
 
@@ -228,4 +228,4 @@ function animate() {
 
   renderer.render(scene, camera);
 }
-animate();  
+animate();
