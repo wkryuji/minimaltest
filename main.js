@@ -16,6 +16,9 @@ resetBtn.textContent = '🔄 元に戻す';
 resetBtn.style.cssText = 'position: absolute; top: 12px; left: 130px; z-index: 100;';
 document.body.appendChild(resetBtn);
 
+let orbitSpeedMultiplier = 1.0;
+let rotationSpeedMultiplier = 1.0;
+
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x000000);
 
@@ -132,6 +135,7 @@ orbitRaw.forEach((data, i) => {
     const clouds = new THREE.Mesh(cloudGeometry, cloudMaterial);
     planet.add(clouds);
     planet.userData.clouds = clouds;
+    planet.rotation.z = THREE.MathUtils.degToRad(23.4); // 地軸の傾きを反映
   }
 
   if (data.name === "土星") {
@@ -180,6 +184,33 @@ resetBtn.addEventListener('click', () => {
   camera.lookAt(initialCameraTarget);
 });
 
+const speedLabel = document.createElement('div');
+speedLabel.style.cssText = 'position: absolute; top: 50px; left: 12px; color: white; font-size: 14px; z-index: 100;';
+speedLabel.textContent = '自転: 1.0x 公転: 1.0x';
+document.body.appendChild(speedLabel);
+
+const speedUpBtn = document.createElement('button');
+speedUpBtn.textContent = '⏩ スピードアップ';
+speedUpBtn.style.cssText = 'position: absolute; top: 80px; left: 12px; z-index: 100;';
+document.body.appendChild(speedUpBtn);
+
+const slowDownBtn = document.createElement('button');
+slowDownBtn.textContent = '⏪ スピードダウン';
+slowDownBtn.style.cssText = 'position: absolute; top: 80px; left: 150px; z-index: 100;';
+document.body.appendChild(slowDownBtn);
+
+speedUpBtn.addEventListener('click', () => {
+  orbitSpeedMultiplier *= 2;
+  rotationSpeedMultiplier *= 2;
+  speedLabel.textContent = `自転: ${rotationSpeedMultiplier.toFixed(1)}x 公転: ${orbitSpeedMultiplier.toFixed(1)}x`;
+});
+
+slowDownBtn.addEventListener('click', () => {
+  orbitSpeedMultiplier /= 2;
+  rotationSpeedMultiplier /= 2;
+  speedLabel.textContent = `自転: ${rotationSpeedMultiplier.toFixed(1)}x 公転: ${orbitSpeedMultiplier.toFixed(1)}x`;
+});
+
 const clock = new THREE.Clock();
 function animate() {
   requestAnimationFrame(animate);
@@ -188,24 +219,24 @@ function animate() {
   sun.rotation.y += 0.05 * delta;
 
   planets.forEach(({ mesh: p }) => {
-    p.userData.angle += p.userData.orbitSpeed * delta;
+    p.userData.angle += p.userData.orbitSpeed * delta * orbitSpeedMultiplier;
     const r = p.userData.radius;
     p.position.set(Math.cos(p.userData.angle) * r, 0, Math.sin(p.userData.angle) * r);
-    p.rotation.y += p.userData.rotationSpeed * delta;
+    p.rotation.y += p.userData.rotationSpeed * delta * rotationSpeedMultiplier;
 
     if (p.userData.moon) {
       const moon = p.userData.moon.mesh;
-      moon.userData.angle += moon.userData.orbitSpeed * delta;
+      moon.userData.angle += moon.userData.orbitSpeed * delta * orbitSpeedMultiplier;
       moon.position.set(
         Math.cos(moon.userData.angle) * moon.userData.orbitRadius,
         0,
         Math.sin(moon.userData.angle) * moon.userData.orbitRadius
       );
-      moon.rotation.y += 0.05 * delta;
+      moon.rotation.y += 0.05 * delta * rotationSpeedMultiplier;
     }
 
     if (p.userData.clouds) {
-      p.userData.clouds.rotation.y += 0.01 * delta;
+      p.userData.clouds.rotation.y += 0.01 * delta * rotationSpeedMultiplier;
     }
   });
 
