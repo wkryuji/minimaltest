@@ -1,15 +1,25 @@
-// === Three.js を使用したテクスチャ付き太陽系モデル ===
 import * as THREE from 'three';
-import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls.js';
 
 const initialCameraPosition = new THREE.Vector3(20, 10, 25);
 const initialCameraTarget = new THREE.Vector3(0, 0, 0);
+let cameraTarget = new THREE.Vector3(0, 0, 0);
+let followTargetName = null; // 追加
 
 // === UIボタン ===
-const followBtn = document.createElement('button');
-followBtn.textContent = '🌍 地球を追う';
-followBtn.style.cssText = 'position: absolute; top: 12px; left: 12px; z-index: 100;';
-document.body.appendChild(followBtn);
+const followSelect = document.createElement('select'); // 変更
+followSelect.style.cssText = 'position: absolute; top: 12px; left: 12px; z-index: 100;';
+const followOptions = ['なし', '水星', '金星', '地球', '火星', '木星', '土星', '天王星', '海王星'];
+followOptions.forEach(name => {
+  const option = document.createElement('option');
+  option.value = name === 'なし' ? '' : name;
+  option.textContent = name === 'なし' ? '🚫 追尾しない' : `🔭 ${name}を追う`;
+  followSelect.appendChild(option);
+});
+document.body.appendChild(followSelect);
+
+followSelect.addEventListener('change', () => { // 変更
+  followTargetName = followSelect.value || null;
+});
 
 const resetBtn = document.createElement('button');
 resetBtn.textContent = '🔄 元に戻す';
@@ -107,7 +117,8 @@ orbitRaw.forEach((data, i) => {
     new THREE.SphereGeometry(data.size, 32, 32),
     new THREE.MeshStandardMaterial({ map: texture })
   );
-  planet.userData = { radius: data.radius, angle: Math.random() * Math.PI * 2, orbitSpeed, rotationSpeed };
+  planet.name = data.name; // New line added
+  planet.userData = { radius: data.radius, baseRadius: data.radius, angle: Math.random() * Math.PI * 2, orbitSpeed, rotationSpeed };
 
   if (data.name === "地球") {
     earthObject = planet;
@@ -153,62 +164,146 @@ orbitRaw.forEach((data, i) => {
   planets.push({ mesh: planet, group: orbitGroup });
 });
 
-const controls = new PointerLockControls(camera, document.body);
-document.body.addEventListener('click', () => controls.lock());
+const camBtnContainer = document.createElement('div');
+camBtnContainer.style.cssText = `
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  z-index: 100;
+  display: grid;
+  grid-template-columns: repeat(3, auto);
+  grid-gap: 6px;
+  align-items: center;
+  justify-items: center;
+`;
+document.body.appendChild(camBtnContainer);
 
-let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
-const velocity = new THREE.Vector3();
-const direction = new THREE.Vector3();
+camBtnContainer.appendChild(createCamButton('', () => {})); // empty
+camBtnContainer.appendChild(createCamButton('🔼 前へ', () => { camera.position.z -= 1; }));
+camBtnContainer.appendChild(createCamButton('', () => {}));
 
-document.addEventListener('keydown', e => {
-  if (e.code === 'KeyW') moveForward = true;
-  if (e.code === 'KeyS') moveBackward = true;
-  if (e.code === 'KeyA') moveLeft = true;
-  if (e.code === 'KeyD') moveRight = true;
-});
-document.addEventListener('keyup', e => {
-  if (e.code === 'KeyW') moveForward = false;
-  if (e.code === 'KeyS') moveBackward = false;
-  if (e.code === 'KeyA') moveLeft = false;
-  if (e.code === 'KeyD') moveRight = false;
-});
+camBtnContainer.appendChild(createCamButton('◀ 左へ', () => { camera.position.x -= 1; }));
+camBtnContainer.appendChild(createCamButton('', () => {}));
+camBtnContainer.appendChild(createCamButton('▶ 右へ', () => { camera.position.x += 1; }));
 
-let followEarth = false;
-followBtn.addEventListener('click', () => {
-  followEarth = true;
-  controls.unlock();
-});
+camBtnContainer.appendChild(createCamButton('', () => {}));
+camBtnContainer.appendChild(createCamButton('🔽 後ろへ', () => { camera.position.z += 1; }));
+camBtnContainer.appendChild(createCamButton('', () => {}));
+
+camBtnContainer.appendChild(createCamButton('⬆ 上へ', () => { camera.position.y += 1; }));
+camBtnContainer.appendChild(createCamButton('', () => {}));
+camBtnContainer.appendChild(createCamButton('⬇ 下へ', () => { camera.position.y -= 1; }));
+
+const lookBtnContainer = document.createElement('div');
+lookBtnContainer.style.cssText = `
+  position: absolute;
+  bottom: 180px;
+  left: 12px;
+  z-index: 100;
+  display: grid;
+  grid-template-columns: repeat(3, auto);
+  grid-gap: 6px;
+  align-items: center;
+  justify-items: center;
+`;
+document.body.appendChild(lookBtnContainer);
+
+lookBtnContainer.appendChild(createCamButton('', () => {}));
+lookBtnContainer.appendChild(createCamButton('👁 上を向く', () => { cameraTarget.y += 1; }));
+lookBtnContainer.appendChild(createCamButton('', () => {}));
+
+lookBtnContainer.appendChild(createCamButton('👁 左を向く', () => { cameraTarget.x -= 1; }));
+lookBtnContainer.appendChild(createCamButton('', () => {}));
+lookBtnContainer.appendChild(createCamButton('👁 右を向く', () => { cameraTarget.x += 1; }));
+
+lookBtnContainer.appendChild(createCamButton('', () => {}));
+lookBtnContainer.appendChild(createCamButton('👁 下を向く', () => { cameraTarget.y -= 1; }));
+lookBtnContainer.appendChild(createCamButton('', () => {}));
+
 resetBtn.addEventListener('click', () => {
-  followEarth = false;
   camera.position.copy(initialCameraPosition);
-  camera.lookAt(initialCameraTarget);
+  cameraTarget.copy(initialCameraTarget);
 });
 
-const speedLabel = document.createElement('div');
-speedLabel.style.cssText = 'position: absolute; top: 50px; left: 12px; color: white; font-size: 14px; z-index: 100;';
-speedLabel.textContent = '自転: 1.0x 公転: 1.0x';
-document.body.appendChild(speedLabel);
+// ラベルと入力フィールド
+const labelStyle = 'color: white; font-size: 14px; margin-right: 8px;';
+const inputStyle = 'width: 60px; margin-right: 20px;';
 
-const speedUpBtn = document.createElement('button');
-speedUpBtn.textContent = '⏩ スピードアップ';
-speedUpBtn.style.cssText = 'position: absolute; top: 80px; left: 12px; z-index: 100;';
-document.body.appendChild(speedUpBtn);
+const controlContainer = document.createElement('div');
+controlContainer.style.cssText = 'position: absolute; top: 50px; left: 12px; z-index: 100; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 8px; display: flex; align-items: center;';
+document.body.appendChild(controlContainer);
 
-const slowDownBtn = document.createElement('button');
-slowDownBtn.textContent = '⏪ スピードダウン';
-slowDownBtn.style.cssText = 'position: absolute; top: 80px; left: 150px; z-index: 100;';
-document.body.appendChild(slowDownBtn);
+const rotationLabel = document.createElement('label');
+rotationLabel.textContent = '自転倍率';
+rotationLabel.style = labelStyle;
+controlContainer.appendChild(rotationLabel);
 
-speedUpBtn.addEventListener('click', () => {
-  orbitSpeedMultiplier *= 2;
-  rotationSpeedMultiplier *= 2;
-  speedLabel.textContent = `自転: ${rotationSpeedMultiplier.toFixed(1)}x 公転: ${orbitSpeedMultiplier.toFixed(1)}x`;
+const rotationInput = document.createElement('input');
+rotationInput.type = 'number';
+rotationInput.step = '0.1';
+rotationInput.value = rotationSpeedMultiplier.toString();
+rotationInput.style = inputStyle;
+controlContainer.appendChild(rotationInput);
+
+const orbitLabel = document.createElement('label');
+orbitLabel.textContent = '公転倍率';
+orbitLabel.style = labelStyle;
+controlContainer.appendChild(orbitLabel);
+
+const orbitInput = document.createElement('input');
+orbitInput.type = 'number';
+orbitInput.step = '0.1';
+orbitInput.value = orbitSpeedMultiplier.toString();
+orbitInput.style = inputStyle;
+controlContainer.appendChild(orbitInput);
+
+const distanceLabel = document.createElement('label');
+distanceLabel.textContent = '距離倍率';
+distanceLabel.style = labelStyle;
+controlContainer.appendChild(distanceLabel);
+
+const distanceInput = document.createElement('input');
+distanceInput.type = 'number';
+distanceInput.step = '0.1';
+distanceInput.value = '1.0';
+distanceInput.style = inputStyle;
+controlContainer.appendChild(distanceInput);
+
+const applyBtn = document.createElement('button');
+applyBtn.textContent = '適用';
+applyBtn.style.cssText = 'padding: 6px 12px; font-size: 14px;';
+controlContainer.appendChild(applyBtn);
+
+// 入力処理
+rotationInput.addEventListener('input', () => { // 追加
+  const val = parseFloat(rotationInput.value);
+  if (!isNaN(val)) rotationSpeedMultiplier = val;
 });
+orbitInput.addEventListener('input', () => { // 追加
+  const val = parseFloat(orbitInput.value);
+  if (!isNaN(val)) orbitSpeedMultiplier = val;
+});
+distanceInput.addEventListener('input', () => { // 追加
+  const newDist = parseFloat(distanceInput.value);
+  if (!isNaN(newDist)) {
+    planets.forEach(p => {
+      const angle = p.mesh.userData.angle;
+      const baseRadius = p.mesh.userData.baseRadius;
+      const newRadius = baseRadius * newDist;
+      p.mesh.userData.radius = newRadius;
+      const x = Math.cos(angle) * newRadius;
+      const z = Math.sin(angle) * newRadius;
+      p.mesh.position.set(x, 0, z);
 
-slowDownBtn.addEventListener('click', () => {
-  orbitSpeedMultiplier /= 2;
-  rotationSpeedMultiplier /= 2;
-  speedLabel.textContent = `自転: ${rotationSpeedMultiplier.toFixed(1)}x 公転: ${orbitSpeedMultiplier.toFixed(1)}x`;
+      const ringMesh = p.group.children[0];
+      if (ringMesh.geometry instanceof THREE.RingGeometry) {
+        const innerRadius = newRadius - 0.02;
+        const outerRadius = newRadius + 0.02;
+        ringMesh.geometry.dispose();
+        ringMesh.geometry = new THREE.RingGeometry(innerRadius, outerRadius, 256);
+      }
+    });
+  }
 });
 
 const clock = new THREE.Clock();
@@ -240,22 +335,17 @@ function animate() {
     }
   });
 
-  if (followEarth && earthObject) {
-    const offset = new THREE.Vector3(2, 1.5, 2);
-    const target = earthObject.getWorldPosition(new THREE.Vector3()).clone().add(offset);
-    camera.position.lerp(target, 0.1);
-    camera.lookAt(earthObject.getWorldPosition(new THREE.Vector3()));
-  } else {
-    direction.z = Number(moveForward) - Number(moveBackward);
-    direction.x = Number(moveRight) - Number(moveLeft);
-    direction.normalize();
-    if (controls.isLocked) {
-      velocity.z = direction.z * 0.1;
-      velocity.x = direction.x * 0.1;
-      controls.moveRight(velocity.x);
-      controls.moveForward(velocity.z);
+  if (followTargetName) { // 追加
+    const targetPlanet = planets.find(p => p.mesh.name === followTargetName)?.mesh;
+    if (targetPlanet) {
+      const planetPos = targetPlanet.getWorldPosition(new THREE.Vector3());
+      const offset = new THREE.Vector3(2, 1.5, 2);
+      camera.position.lerp(planetPos.clone().add(offset), 0.1);
+      cameraTarget.lerp(planetPos, 0.1);
     }
   }
+
+  camera.lookAt(cameraTarget);
 
   renderer.render(scene, camera);
 }
