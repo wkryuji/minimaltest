@@ -4,6 +4,13 @@ const initialCameraPosition = new THREE.Vector3(20, 10, 25);
 const initialCameraTarget = new THREE.Vector3(0, 0, 0);
 let cameraTarget = new THREE.Vector3(0, 0, 0);
 let followTargetName = null; // 追加
+function createCamButton(label, onClick) {
+  const btn = document.createElement('button');
+  btn.textContent = label;
+  btn.style.cssText = 'padding: 6px 12px; font-size: 14px;';
+  btn.addEventListener('click', onClick);
+  return btn;
+}
 
 // === UIボタン ===
 const followSelect = document.createElement('select'); // 変更
@@ -118,7 +125,14 @@ orbitRaw.forEach((data, i) => {
     new THREE.MeshStandardMaterial({ map: texture })
   );
   planet.name = data.name; // New line added
-  planet.userData = { radius: data.radius, baseRadius: data.radius, angle: Math.random() * Math.PI * 2, orbitSpeed, rotationSpeed };
+  planet.userData = {
+    name: data.name,
+    radius: data.radius,
+    baseRadius: data.radius,
+    angle: Math.random() * Math.PI * 2,
+    orbitSpeed,
+    rotationSpeed
+  };
 
   if (data.name === "地球") {
     earthObject = planet;
@@ -165,60 +179,30 @@ orbitRaw.forEach((data, i) => {
 });
 
 const camBtnContainer = document.createElement('div');
-camBtnContainer.style.cssText = `
-  position: absolute;
-  bottom: 12px;
-  left: 12px;
-  z-index: 100;
-  display: grid;
-  grid-template-columns: repeat(3, auto);
-  grid-gap: 6px;
-  align-items: center;
-  justify-items: center;
-`;
+camBtnContainer.style.cssText = 'position: absolute; bottom: 12px; left: 12px; z-index: 100; display: flex; flex-direction: column; gap: 4px;';
 document.body.appendChild(camBtnContainer);
 
-camBtnContainer.appendChild(createCamButton('', () => {})); // empty
-camBtnContainer.appendChild(createCamButton('🔼 前へ', () => { camera.position.z -= 1; }));
-camBtnContainer.appendChild(createCamButton('', () => {}));
-
-camBtnContainer.appendChild(createCamButton('◀ 左へ', () => { camera.position.x -= 1; }));
-camBtnContainer.appendChild(createCamButton('', () => {}));
-camBtnContainer.appendChild(createCamButton('▶ 右へ', () => { camera.position.x += 1; }));
-
-camBtnContainer.appendChild(createCamButton('', () => {}));
-camBtnContainer.appendChild(createCamButton('🔽 後ろへ', () => { camera.position.z += 1; }));
-camBtnContainer.appendChild(createCamButton('', () => {}));
-
-camBtnContainer.appendChild(createCamButton('⬆ 上へ', () => { camera.position.y += 1; }));
-camBtnContainer.appendChild(createCamButton('', () => {}));
-camBtnContainer.appendChild(createCamButton('⬇ 下へ', () => { camera.position.y -= 1; }));
+camBtnContainer.innerHTML = '';
+[ 
+  { label: '⬆ 上へ', action: () => { camera.position.y += 1; } },
+  { label: '⬇ 下へ', action: () => { camera.position.y -= 1; } },
+  { label: '◀ 左へ', action: () => { camera.position.x -= 1; } },
+  { label: '▶ 右へ', action: () => { camera.position.x += 1; } },
+  { label: '🔼 前へ', action: () => { camera.position.z -= 1; } },
+  { label: '🔽 後ろへ', action: () => { camera.position.z += 1; } }
+].forEach(btn => camBtnContainer.appendChild(createCamButton(btn.label, btn.action)));
 
 const lookBtnContainer = document.createElement('div');
-lookBtnContainer.style.cssText = `
-  position: absolute;
-  bottom: 180px;
-  left: 12px;
-  z-index: 100;
-  display: grid;
-  grid-template-columns: repeat(3, auto);
-  grid-gap: 6px;
-  align-items: center;
-  justify-items: center;
-`;
+lookBtnContainer.style.cssText = 'position: absolute; bottom: 200px; left: 12px; z-index: 100; display: flex; flex-direction: column; gap: 4px;';
 document.body.appendChild(lookBtnContainer);
 
-lookBtnContainer.appendChild(createCamButton('', () => {}));
-lookBtnContainer.appendChild(createCamButton('👁 上を向く', () => { cameraTarget.y += 1; }));
-lookBtnContainer.appendChild(createCamButton('', () => {}));
-
-lookBtnContainer.appendChild(createCamButton('👁 左を向く', () => { cameraTarget.x -= 1; }));
-lookBtnContainer.appendChild(createCamButton('', () => {}));
-lookBtnContainer.appendChild(createCamButton('👁 右を向く', () => { cameraTarget.x += 1; }));
-
-lookBtnContainer.appendChild(createCamButton('', () => {}));
-lookBtnContainer.appendChild(createCamButton('👁 下を向く', () => { cameraTarget.y -= 1; }));
-lookBtnContainer.appendChild(createCamButton('', () => {}));
+lookBtnContainer.innerHTML = '';
+[ 
+  { label: '👁 上を向く', action: () => { cameraTarget.y += 1; } },
+  { label: '👁 下を向く', action: () => { cameraTarget.y -= 1; } },
+  { label: '👁 左を向く', action: () => { cameraTarget.x -= 1; } },
+  { label: '👁 右を向く', action: () => { cameraTarget.x += 1; } }
+].forEach(btn => lookBtnContainer.appendChild(createCamButton(btn.label, btn.action)));
 
 resetBtn.addEventListener('click', () => {
   camera.position.copy(initialCameraPosition);
@@ -335,9 +319,10 @@ function animate() {
     }
   });
 
-  if (followTargetName) { // 追加
-    const targetPlanet = planets.find(p => p.mesh.name === followTargetName)?.mesh;
-    if (targetPlanet) {
+  if (followTargetName) {
+    const found = planets.find(p => p.mesh.userData.name === followTargetName);
+    if (found) {
+      const targetPlanet = found.mesh;
       const planetPos = targetPlanet.getWorldPosition(new THREE.Vector3());
       const offset = new THREE.Vector3(2, 1.5, 2);
       camera.position.lerp(planetPos.clone().add(offset), 0.1);
@@ -345,8 +330,9 @@ function animate() {
     }
   }
 
+
   camera.lookAt(cameraTarget);
 
   renderer.render(scene, camera);
 }
-animate();
+animate();  
